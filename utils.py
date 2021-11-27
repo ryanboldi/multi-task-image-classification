@@ -81,6 +81,8 @@ class CIFAR10Loader(BaseDataLoader):
 
         self.task_dataloader = []
         for t in range(10):
+            #labels is a LongTensor (c==t).long() converts ByteTensor to LongTensor.
+            # creates a sparse Tensor of 1s and 0s. 1 means true for this task.
             dataset = CustomDataset(data=images.copy(), labels=[(c == t).long() for c in labels])
             dataloader = torch.utils.data.DataLoader(dataset,
                                                      batch_size=self.batch_size,
@@ -390,3 +392,74 @@ class MultiTaskDataLoader:
         self.step += 1
 
         return data, labels, task
+
+class MultiTaskSequentialDataLoader:
+    def __init__(self, dataloaders, task_mixing_ratio):
+        self.dataloaders = dataloaders
+        self.iters = [iter(loader) for loader in self.dataloaders]
+
+        #if the TMR is 0, all tasks will be trained sequentially (i.e AAA...BBB...CCC...DDD...)
+        #if the TMR is 1, all tasks will be trained in reverse order (i.e ...DDD...CCC...BBB...AAA)
+        #if TMR is 0.5, tasks will be mixed perfectly (i.e ABCD..ABCD...ABCD...)
+        self.task_mixing_ratio = task_mixing_ratio
+
+        #num of images in each class in dataset
+        self.task_sizes = [len(d) for d in self.dataloaders]
+
+        #num of tasks
+        self.task_count = len(task_sizes)
+
+        # num of images in entire dataset
+        self.size = sum(task_sizes)
+
+        #convert TMR to prob distribution
+        self.probs = []
+        self.__set_task_probs__()
+
+        self.step = 0
+
+    #returns a list of probabilities, one for each task, given the TMR
+    def __set_task_probs__():
+        self.probs = []
+        #tmr between 0 and 1
+        
+        #for now, will only consider 0, 0.25, 0.5, 0.75, and 1
+        bucket = self.task_mixing_ratio // 0.25
+        #bucket 0 = 0, 1 = 0.25, 2 = 0.5, 3 = 0.75, 4 = 1, other = 0.5
+
+        if (bucket == 0):
+            self.probs = [1]
+            for i in range(1, self.task_count):
+                self.probs.append(0)
+        elif (bucket == 1):
+            #half decreasing (should sum to roughly 1)
+            self.probs = [1/(2**i) for i in range(1, self.task_count + 1)]
+        elif (bucket == 3):
+            self.probs = [1/(2**i) for i in range(1, self.task_count + 1)]
+            self.probs.reverse()
+        elif (bucket == 4):
+            for i in range(0, self.task_count-1):
+                self.probs.append(0)
+            self.probs.append(1)
+        else: #bucket = 2 or other (default)
+            self.probs = [1/(self.task_count) for _ in range(self.task_count)]
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.step >= self.size:
+            self.step = 0
+            raise StopIteration
+
+        task = np.random.choice(list(range(len(self.dataloaders))), p=self.probs)
+
+        try:
+            data, labels = self.iters[task].__next__()
+        except StopIteration:
+            self.iters[task] = iter(self.dataloaders[task])
+            data, labels = self.iters[task].__next__()
+
+        self.step += 1
+
+        return data, labels, task        
