@@ -448,6 +448,8 @@ class MultiTaskSequentialDataLoader:
         return self
 
     def __next__(self):
+        #check if the current task has not been used up,
+        # if it has, shift the probabilities to the right, adding a 0 for current task.
         if self.step >= self.size:
             self.step = 0
             raise StopIteration
