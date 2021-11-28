@@ -302,7 +302,7 @@ class MultiTaskJointAgent(MultiTaskSeparateAgent):
                     outputs = model(inputs)
                     loss += self.loss_weight[t] * criterion(outputs, (labels == t).long())
 
-                optimizer.zero_grad()
+                optimizer.zero_grad(set_to_none=True)
                 loss.backward()
                 optimizer.step()
 
