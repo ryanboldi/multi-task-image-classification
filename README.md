@@ -52,6 +52,10 @@ Arguments:
    * `0`: CIFAR-10
    * `1`: CIFAR-100
    * `2`: Omniglot
+ * `--tmr` : (default: None)
+   * `0.5`: Even task probs
+   * `1`  : Tasks entirely sequential from start to end              
+   * `0`  : Tasks entirely sequential from end to start 
  * `--task`: Task ID (for setting `2`) (default: None) 
  * `--save_path`: Path (directory) that model and history are saved. (default: `'.'`)
  * `--save_model`: A flag used to decide whether to save model or not.

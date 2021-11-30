@@ -6,6 +6,10 @@ import torch
 import torchvision
 
 
+def softmax(x):
+    ex = np.exp(x - np.max(x))
+    return ex / ex.sum()
+
 class CustomDataset(torch.utils.data.dataset.Dataset):
     def __init__(self, data, labels):
         self.data = data
@@ -404,6 +408,7 @@ class MultiTaskSequentialDataLoader:
         #if the TMR is 1, all tasks will be trained in reverse order (i.e ...DDD...CCC...BBB...AAA)
         #if TMR is 0.5, tasks will be mixed perfectly (i.e ABCD..ABCD...ABCD...)
         self.task_mixing_ratio = task_mixing_ratio
+        self.roll_direction = 1 if task_mixing_ratio <= 0.5 else -1
 
         #num of images in each class in dataset
         self.task_sizes = [len(d) for d in self.dataloaders]
@@ -441,8 +446,13 @@ class MultiTaskSequentialDataLoader:
         elif (bucket == 1):
             #half decreasing (should sum to roughly 1)
             self.probs = [1/(2**i) for i in range(1, self.task_count + 1)]
+            self.probs = softmax(self.probs).tolist()
+            print("softmaxed probs: " + str(self.probs))
         elif (bucket == 3):
             self.probs = [1/(2**i) for i in range(1, self.task_count + 1)]
+            print("probs: " + str(self.probs))
+            self.probs = softmax(self.probs).tolist()
+            print("softmaxed probs: " + str(self.probs))
             self.probs.reverse()
         elif (bucket == 4):
             for i in range(0, self.task_count-1):
@@ -472,7 +482,8 @@ class MultiTaskSequentialDataLoader:
 
             #if the task runs out, we shift the probabilities to the right
             if (task < self.task_count - 1):
-                np.roll(self.probs, 1) #rotate the probs by one
+                self.probs = np.roll(self.probs, self.roll_direction) #rotate the probs by one
+                print(self.probs)
 
         self.step += 1
 
