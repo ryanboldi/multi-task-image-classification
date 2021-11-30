@@ -48,8 +48,9 @@ class BaseDataLoader:
 
 
 class CIFAR10Loader(BaseDataLoader):
-    def __init__(self, batch_size=128, train=True, shuffle=True, drop_last=False):
+    def __init__(self, batch_size=128, train=True, shuffle=True, drop_last=False, task_mixing_ratio=None):
         super(CIFAR10Loader, self).__init__(batch_size, train, shuffle, drop_last)
+        print("Using CIFAR10 Loader")
         transform = torchvision.transforms.Compose(
             [torchvision.transforms.ToTensor(),
              torchvision.transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))]
@@ -68,6 +69,7 @@ class CIFAR10Loader(BaseDataLoader):
         self.shuffle = shuffle
         self.drop_last = drop_last
 
+        self.task_mixing_ratio = task_mixing_ratio
 
     def _create_TaskDataLoaders(self):
         images = []
@@ -99,7 +101,7 @@ class CIFAR10Loader(BaseDataLoader):
             self._create_TaskDataLoaders()
 
         if loader == 'multi-task':
-            return MultiTaskDataLoader(self.task_dataloader, prob)
+            return MultiTaskSequentialDataLoader(self.task_dataloader, task_mixing_ratio = self.task_mixing_ratio)
         else:
             assert loader in list(range(10)), 'Unknown loader: {}'.format(loader)
             return self.task_dataloader[loader]
@@ -407,19 +409,24 @@ class MultiTaskSequentialDataLoader:
         self.task_sizes = [len(d) for d in self.dataloaders]
 
         #num of tasks
-        self.task_count = len(task_sizes)
+        self.task_count = len(self.task_sizes)
 
         # num of images in entire dataset
-        self.size = sum(task_sizes)
+        self.size = sum(self.task_sizes)
 
         #convert TMR to prob distribution
         self.probs = []
+
+        print("TMR: " + str(task_mixing_ratio))
         self.__set_task_probs__()
+
+        print("using MTSDL, starting probs are:")
+        print(self.probs)
 
         self.step = 0
 
     #returns a list of probabilities, one for each task, given the TMR
-    def __set_task_probs__():
+    def __set_task_probs__(self):
         self.probs = []
         #tmr between 0 and 1
         
@@ -448,11 +455,12 @@ class MultiTaskSequentialDataLoader:
         return self
 
     def __next__(self):
-        #check if the current task has not been used up,
-        # if it has, shift the probabilities to the right, adding a 0 for current task.
         if self.step >= self.size:
             self.step = 0
             raise StopIteration
+
+        #check if the current task has not been used up,
+        # if it has, shift the probabilities to the right, adding a 0 for current task.
 
         task = np.random.choice(list(range(len(self.dataloaders))), p=self.probs)
 
@@ -461,6 +469,10 @@ class MultiTaskSequentialDataLoader:
         except StopIteration:
             self.iters[task] = iter(self.dataloaders[task])
             data, labels = self.iters[task].__next__()
+
+            #if the task runs out, we shift the probabilities to the right
+            if (task < self.task_count - 1):
+                np.roll(self.probs, 1) #rotate the probs by one
 
         self.step += 1
 

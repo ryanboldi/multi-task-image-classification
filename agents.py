@@ -282,7 +282,7 @@ class MultiTaskJointAgent(MultiTaskSeparateAgent):
         for model in self.models:
             model.train()
 
-        dataloader = train_data.get_loader()
+        dataloader = train_data.get_loader("multi-task")
         criterion = nn.CrossEntropyLoss()
 
         parameters = []

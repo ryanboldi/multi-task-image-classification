@@ -21,6 +21,9 @@ def parse_args():
     parser.add_argument('--data', type=int, default=1, help='0: CIFAR-10 \n'
                                                             '1: CIFAR-100 \n'
                                                             '2: Omniglot \n')
+    parser.add_argument('--tmr', type=float, default=None, help='0.5: Even task probs \n'
+                                                                '1: Tasks entirely sequential from start to end \n'
+                                                                '0: Tasks entirely sequential from end to start \n')
     parser.add_argument('--task', type=int, default=None, help='Which class to distinguish (for setting 2)')
     parser.add_argument('--save_path', type=str, default='.')
     parser.add_argument('--save_model', action='store_true')
@@ -33,10 +36,10 @@ def parse_args():
 
 def train(args):
     if args.data == 0:
-        train_data = CIFAR10Loader(batch_size=128, train=True, drop_last=True)
-        test_data = CIFAR10Loader(batch_size=128, train=False, drop_last=False)
+        train_data = CIFAR10Loader(batch_size=128, train=True, drop_last=True, task_mixing_ratio=args.tmr)
+        test_data = CIFAR10Loader(batch_size=128, train=False, drop_last=False, task_mixing_ratio=args.tmr)
         multi_task_type = 'binary'
-        num_epochs = 20
+        num_epochs = 1 #FOR TESTING
     elif args.data == 1:
         train_data = CIFAR100Loader(batch_size=128, train=True, drop_last=True)
         test_data = CIFAR100Loader(batch_size=128, train=False, drop_last=False)
