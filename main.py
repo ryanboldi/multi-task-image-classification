@@ -39,7 +39,7 @@ def train(args):
         train_data = CIFAR10Loader(batch_size=128, train=True, drop_last=True, task_mixing_ratio=args.tmr)
         test_data = CIFAR10Loader(batch_size=128, train=False, drop_last=False, task_mixing_ratio=args.tmr)
         multi_task_type = 'binary'
-        num_epochs = 1 #FOR TESTING
+        num_epochs = 10
     elif args.data == 1:
         train_data = CIFAR100Loader(batch_size=128, train=True, drop_last=True)
         test_data = CIFAR100Loader(batch_size=128, train=False, drop_last=False)

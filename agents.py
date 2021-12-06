@@ -190,6 +190,8 @@ class MultiTaskSeparateAgent(BaseAgent):
         accuracy = []
 
         for epoch in range(num_epochs):
+            ###
+            dataloader.set_task_probs()
             for inputs, labels, task in dataloader:
                 model = self.models[task]
                 optimizer = optimizers[task]

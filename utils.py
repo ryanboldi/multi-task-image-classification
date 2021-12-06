@@ -423,7 +423,7 @@ class MultiTaskSequentialDataLoader:
         self.probs = []
 
         print("TMR: " + str(task_mixing_ratio))
-        self.__set_task_probs__()
+        self.set_task_probs()
 
         print("using MTSDL, starting probs are:")
         print(self.probs)
@@ -431,7 +431,7 @@ class MultiTaskSequentialDataLoader:
         self.step = 0
 
     #returns a list of probabilities, one for each task, given the TMR
-    def __set_task_probs__(self):
+    def set_task_probs(self):
         self.probs = []
         #tmr between 0 and 1
         
@@ -447,12 +447,12 @@ class MultiTaskSequentialDataLoader:
             #half decreasing (should sum to roughly 1)
             self.probs = [1/(2**i) for i in range(1, self.task_count + 1)]
             self.probs = softmax(self.probs).tolist()
-            print("softmaxed probs: " + str(self.probs))
+            #print("softmaxed probs: " + str(self.probs))
         elif (bucket == 3):
             self.probs = [1/(2**i) for i in range(1, self.task_count + 1)]
-            print("probs: " + str(self.probs))
+            #print("probs: " + str(self.probs))
             self.probs = softmax(self.probs).tolist()
-            print("softmaxed probs: " + str(self.probs))
+            #print("softmaxed probs: " + str(self.probs))
             self.probs.reverse()
         elif (bucket == 4):
             for i in range(0, self.task_count-1):
